@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 
 namespace DICEUS_Assistant_TestBot.Models;
 
-public class ExtractedData
+public enum BotState
 {
-	public string FirstName { get; set; }
-	public string LastName { get; set; }
+	WaitingForPassport,
+	ConfirmingPassport,
+	WaitingForTechPassport,
+	ConfirmingTechPassport
 }

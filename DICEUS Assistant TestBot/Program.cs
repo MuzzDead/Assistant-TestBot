@@ -20,6 +20,7 @@ namespace DICEUS_Assistant_TestBot
 
 			var updateHandler = new BotUpdateHandler(botClient);
 
+
 			botClient.StartReceiving(
 				updateHandler,
 				receiverOptions,
