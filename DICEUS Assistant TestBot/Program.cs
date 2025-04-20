@@ -9,7 +9,7 @@ namespace DICEUS_Assistant_TestBot
 	{
 		private static async Task Main(string[] args)
 		{
-			var botClient = new TelegramBotClient("7369978362:AAFZfJy6AO--ZPKh3C3ifUy4zUig_3Heeyo");
+			var botClient = new TelegramBotClient("7369978362:AAFP_zgbpARd4KxuJ-tlMTH43nAhi-ly1qs");
 
 			using var cts = new CancellationTokenSource();
 
@@ -19,6 +19,7 @@ namespace DICEUS_Assistant_TestBot
 			};
 
 			var updateHandler = new BotUpdateHandler(botClient);
+
 
 			botClient.StartReceiving(
 				updateHandler,
