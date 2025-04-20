@@ -9,7 +9,7 @@ namespace DICEUS_Assistant_TestBot
 	{
 		private static async Task Main(string[] args)
 		{
-			var botClient = new TelegramBotClient("apikey");
+			var botClient = new TelegramBotClient("token");
 
 			using var cts = new CancellationTokenSource();
 
