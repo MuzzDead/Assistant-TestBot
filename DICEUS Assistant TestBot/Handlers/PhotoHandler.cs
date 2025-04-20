@@ -59,7 +59,7 @@ public static class PhotoHandler
 		memoryStream.Position = 0;
 
 		// Read Mindee
-		var mindee = new MindeeService("de2cb58ebfba1345e5b87a671e81c36c");
+		var mindee = new MindeeService("apikey");
 		var extracted = await mindee.ExtractDataFromInternationalIdAsync(memoryStream, file.FilePath);
 
 		session.PassportFileId = fileId;
