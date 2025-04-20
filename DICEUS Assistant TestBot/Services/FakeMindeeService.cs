@@ -9,9 +9,9 @@ namespace DICEUS_Assistant_TestBot.Services;
 
 public class FakeMindeeService
 {
-	public static ExtractedData ExtractDataFromPassport(string filePath)
+	public static ExtractedPassportData ExtractDataFromPassport(string filePath)
 	{
-		return new ExtractedData
+		return new ExtractedPassportData
 		{
 			FirstName = "Ivan",
 			LastName = "Petrenko"

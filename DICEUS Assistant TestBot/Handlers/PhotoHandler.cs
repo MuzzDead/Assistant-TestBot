@@ -73,7 +73,6 @@ public static class PhotoHandler
 			$"• Sex: {extracted.Sex}\n" +
 			$"• Date of birth: {extracted.BirthDate:yyyy-MM-dd}\n" +
 			$"• Nationality: {extracted.Nationality}\n" +
-			$"• Personal number: {extracted.PersonalNumber}\n" +
 			$"• Document number: {extracted.DocumentNumber}\n" +
 			$"• Expiration date: {(extracted.ExpirationDate == DateTime.MinValue ? "Unknown" : extracted.ExpirationDate.ToString("yyyy-MM-dd"))}\n\n" +
 			$"Is this information correct?";
