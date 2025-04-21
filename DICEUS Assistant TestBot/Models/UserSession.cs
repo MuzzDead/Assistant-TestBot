@@ -18,4 +18,8 @@ public class UserSession
 
 	public string? ExtractedFirstName { get; set; }
 	public string? ExtractedLastName { get; set; }
+
+	public Dictionary<string, string>? FakeTechPassportData { get; set; }
+	public bool IsPriceConfirmed { get; set; }
+
 }
