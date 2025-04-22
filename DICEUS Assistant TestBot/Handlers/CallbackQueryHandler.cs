@@ -9,43 +9,25 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types;
 using Telegram.Bot;
 using Telegram.Bot.Types.ReplyMarkups;
+using System.Net.Http;
 
 namespace DICEUS_Assistant_TestBot.Handlers;
 
-public static class CallbackQueryHandler
+public class CallbackQueryHandler
 {
-	public static async Task HandleAsync(TelegramBotClient botClient, CallbackQuery callbackQuery, CancellationToken cancellationToken)
+	private readonly OpenAIService _openAIService;
+
+	public CallbackQueryHandler(OpenAIService openAiService)
+	{
+		_openAIService = openAiService;
+	}
+
+	public async Task HandleAsync(TelegramBotClient botClient, CallbackQuery callbackQuery, CancellationToken cancellationToken)
 	{
 		var userId = callbackQuery.From.Id;
 		var session = SessionStorage.GetOrCreate(userId);
 
-		switch (callbackQuery.Data)
-		{
-			case "confirm_passport_yes":
-				await HandlePassportConfirmed(botClient, callbackQuery, session, cancellationToken);
-				break;
-
-			case "confirm_passport_no":
-				await HandlePassportRejected(botClient, callbackQuery, session, cancellationToken);
-				break;
-
-			case "confirm_techpass_yes":
-				await HandleTechPassConfirmed(botClient, callbackQuery, session, cancellationToken);
-				break;
-
-			case "confirm_techpass_no":
-				await HandleTechPassRejected(botClient, callbackQuery, session, cancellationToken);
-				break;
-
-			case "price_accept":
-				await HandlePriceAccepted(botClient, callbackQuery, session, cancellationToken);
-				break;
-
-			case "price_reject":
-				await HandlePriceRejected(botClient, callbackQuery, session, cancellationToken);
-				break;
-
-		}
+		await botClient.AnswerCallbackQuery(callbackQuery.Id, cancellationToken: cancellationToken);
 
 		if (callbackQuery.Message != null)
 		{
@@ -57,10 +39,58 @@ public static class CallbackQueryHandler
 			);
 		}
 
-		await botClient.AnswerCallbackQuery(callbackQuery.Id, cancellationToken: cancellationToken);
+		switch (callbackQuery.Data)
+		{
+			case "confirm_passport_yes":
+				await HandlePassportConfirmed(botClient, callbackQuery, session, cancellationToken);
+				break;
+			case "confirm_passport_no":
+				await HandlePassportRejected(botClient, callbackQuery, session, cancellationToken);
+				break;
+			case "confirm_techpass_yes":
+				await HandleTechPassConfirmed(botClient, callbackQuery, session, cancellationToken);
+				break;
+			case "confirm_techpass_no":
+				await HandleTechPassRejected(botClient, callbackQuery, session, cancellationToken);
+				break;
+			case "price_accept":
+				if (callbackQuery.Message != null)
+				{
+					await botClient.SendMessage(
+						chatId: callbackQuery.Message.Chat.Id,
+						text: "⏳ Generating your insurance policy. Please wait...",
+						cancellationToken: cancellationToken
+					);
+				}
+
+				_ = Task.Run(async () =>
+				{
+					try
+					{
+						await HandlePriceAccepted(botClient, callbackQuery, session, CancellationToken.None);
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine($"Error generating PDF: {ex}");
+
+						if (callbackQuery.Message != null)
+						{
+							await botClient.SendMessage(
+								chatId: callbackQuery.Message.Chat.Id,
+								text: "❌ Sorry, there was an error generating your policy. Please try again later.",
+								cancellationToken: CancellationToken.None
+							);
+						}
+					}
+				});
+				break;
+			case "price_reject":
+				await HandlePriceRejected(botClient, callbackQuery, session, cancellationToken);
+				break;
+		}
 	}
 
-	private static async Task HandlePassportConfirmed(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
+	private async Task HandlePassportConfirmed(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
 	{
 		session.IsPassportConfirmed = true;
 		session.CurrentState = BotState.WaitingForTechPassport;
@@ -73,7 +103,7 @@ public static class CallbackQueryHandler
 		);
 	}
 
-	private static async Task HandlePassportRejected(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
+	private async Task HandlePassportRejected(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
 	{
 		session.PassportFileId = null;
 		session.ExtractedFirstName = null;
@@ -88,27 +118,29 @@ public static class CallbackQueryHandler
 		);
 	}
 
-	private static async Task HandleTechPassConfirmed(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
+	private async Task HandleTechPassConfirmed(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
 	{
 		session.IsTechPassportConfirmed = true;
 
+		string reply = await _openAIService.GenerateBotReplyAsync("User confirmed tech passport. Inform them that the fixed insurance price is 100 USD and ask if that works for them.");
+
 		await botClient.SendMessage(
 			chatId: callbackQuery.Message!.Chat.Id,
-			text: "💵 The fixed price for the insurance is *$100*.\n\nDoes this price work for you?",
+			text: reply,
 			parseMode: ParseMode.Markdown,
 			replyMarkup: new InlineKeyboardMarkup(new[]
 			{
-			new[]
-			{
-				InlineKeyboardButton.WithCallbackData("✅ Yes, that works", "price_accept"),
-				InlineKeyboardButton.WithCallbackData("❌ No, it's too expensive", "price_reject")
-			}
+				new[]
+				{
+					InlineKeyboardButton.WithCallbackData("✅ Yes, that works", "price_accept"),
+					InlineKeyboardButton.WithCallbackData("❌ No, it's too expensive", "price_reject")
+				}
 			}),
 			cancellationToken: cancellationToken
 		);
 	}
 
-	private static async Task HandleTechPassRejected(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
+	private async Task HandleTechPassRejected(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
 	{
 		session.TechPassportFileId = null;
 		session.FakeTechPassportData = null;
@@ -122,42 +154,32 @@ public static class CallbackQueryHandler
 		);
 	}
 
-
-	private static async Task HandlePriceAccepted(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
+	private async Task HandlePriceAccepted(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
 	{
 		session.IsPriceConfirmed = true;
 
-		// Фіктивний шаблон поліса
-		var policyText = $"""
-			📄 *Car Insurance Policy*
-			
-			👤 Name: {session.ExtractedFirstName} {session.ExtractedLastName}
-			🆔 Document: none
-			🔑 VIN: {session.FakeTechPassportData?["VIN"]}
-			🚘 Vehicle: {session.FakeTechPassportData?["Car Brand"]} {session.FakeTechPassportData?["Model"]} ({session.FakeTechPassportData?["Year"]})
-			📅 Issue Date: {DateTime.Now:yyyy-MM-dd}
-			💰 Price: $100
-			📜 Policy ID: {Guid.NewGuid().ToString("N")[..8].ToUpper()}
-			
-			✅ Thank you for choosing our insurance service!
-			""";
+		string policyText = await _openAIService.GeneratePolicyAsync(session);
+
+		var policyPdfBytes = InsurancePolicyPdfGenerator.CreateFromText(policyText);
+		using var stream = new MemoryStream(policyPdfBytes);
 
 		SessionStorage.Reset(callbackQuery.From.Id);
 
-		await botClient.SendMessage(
+		await botClient.SendDocument(
 			chatId: callbackQuery.Message!.Chat.Id,
-			text: policyText,
-			parseMode: ParseMode.Markdown,
+			document: new InputFileStream(stream, "InsurancePolicy.pdf"),
+			caption: "📄 Here is your generated insurance policy.",
 			cancellationToken: cancellationToken
 		);
 	}
 
-
-	private static async Task HandlePriceRejected(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
+	private async Task HandlePriceRejected(TelegramBotClient botClient, CallbackQuery callbackQuery, UserSession session, CancellationToken cancellationToken)
 	{
+		string reply = await _openAIService.GenerateBotReplyAsync("User rejected the price. Say sorry and let them know there are no other prices available.");
+
 		await botClient.SendMessage(
 			chatId: callbackQuery.Message!.Chat.Id,
-			text: "😔 We're sorry, but $100 is the only available price at this moment.",
+			text: reply,
 			cancellationToken: cancellationToken
 		);
 

@@ -11,10 +11,12 @@ namespace DICEUS_Assistant_TestBot;
 public class BotUpdateHandler : IUpdateHandler
 {
 	private readonly TelegramBotClient _botClient;
+	private readonly CallbackQueryHandler _callbackHandler;
 
-	public BotUpdateHandler(TelegramBotClient botClient)
+	public BotUpdateHandler(TelegramBotClient botClient, CallbackQueryHandler callbackHandler)
 	{
 		_botClient = botClient;
+		_callbackHandler = callbackHandler;
 	}
 
 	public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
@@ -54,7 +56,7 @@ public class BotUpdateHandler : IUpdateHandler
 			case UpdateType.CallbackQuery:
 				if (update.CallbackQuery is { } callbackQuery)
 				{
-					await CallbackQueryHandler.HandleAsync(_botClient, callbackQuery, cancellationToken);
+					await _callbackHandler.HandleAsync(_botClient, callbackQuery, cancellationToken);
 				}
 				break;
 

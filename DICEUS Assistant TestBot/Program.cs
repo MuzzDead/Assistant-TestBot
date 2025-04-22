@@ -1,7 +1,9 @@
-﻿using DICEUS_Assistant_TestBot;
+﻿using DotNetEnv;
+using DICEUS_Assistant_TestBot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot;
+using DICEUS_Assistant_TestBot.Handlers;
 
 namespace DICEUS_Assistant_TestBot
 {
@@ -9,7 +11,18 @@ namespace DICEUS_Assistant_TestBot
 	{
 		private static async Task Main(string[] args)
 		{
-			var botClient = new TelegramBotClient("7369978362:AAFP_zgbpARd4KxuJ-tlMTH43nAhi-ly1qs");
+			Env.Load("D:\\C# Start\\DICEUS Assistant TestBot\\DICEUS Assistant TestBot\\.env");
+			var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+			var botApi = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
+
+			var botClient = new TelegramBotClient(botApi);
+
+			// HttpClient for OpenAI
+			var httpClient = new HttpClient();
+			var openAiService = new OpenAIService(httpClient, apiKey);
+
+			var callbackHandler = new CallbackQueryHandler(openAiService);
+
 
 			using var cts = new CancellationTokenSource();
 
@@ -18,8 +31,7 @@ namespace DICEUS_Assistant_TestBot
 				AllowedUpdates = Array.Empty<UpdateType>()
 			};
 
-			var updateHandler = new BotUpdateHandler(botClient);
-
+			var updateHandler = new BotUpdateHandler(botClient, callbackHandler);
 
 			botClient.StartReceiving(
 				updateHandler,
