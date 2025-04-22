@@ -11,6 +11,7 @@ namespace DICEUS_Assistant_TestBot
 	{
 		private static async Task Main(string[] args)
 		{
+			var botClient = new TelegramBotClient("token");
 			Env.Load("D:\\C# Start\\DICEUS Assistant TestBot\\DICEUS Assistant TestBot\\.env");
 			var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 			var botApi = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
