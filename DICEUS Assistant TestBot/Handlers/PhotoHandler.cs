@@ -59,7 +59,8 @@ public static class PhotoHandler
 		memoryStream.Position = 0;
 
 		// Read Mindee
-		var mindee = new MindeeService("apikey");
+		var mindeeToken = Environment.GetEnvironmentVariable("MINDEE_TOKEN");
+		var mindee = new MindeeService(mindeeToken);
 		var extracted = await mindee.ExtractDataFromInternationalIdAsync(memoryStream, file.FilePath);
 
 		session.PassportFileId = fileId;
@@ -88,8 +89,48 @@ public static class PhotoHandler
 
 	private static async Task HandleTechPassportPhoto(TelegramBotClient botClient, Message message, UserSession session, CancellationToken cancellationToken)
 	{
-		// TODO
+		if (message.Photo == null || message.Photo.Length == 0)
+		{
+			await botClient.SendMessage(
+				chatId: message.Chat.Id,
+				text: "📷 Please send a valid photo of your vehicle registration document.",
+				cancellationToken: cancellationToken
+			);
+			return;
+		}
+
+		session.TechPassportFileId = message.Photo.Last().FileId;
+
+		var data = TechPassportService.GenerateFakeTechData();
+		session.FakeTechPassportData = data;
+		session.CurrentState = BotState.ConfirmingTechPassport;
+
+		var sb = new StringBuilder();
+		sb.AppendLine("🚗 I extracted the following data from your vehicle registration document:");
+
+		foreach (var kv in data)
+		{
+			sb.AppendLine($"• {kv.Key}: {kv.Value}");
+		}
+		sb.AppendLine("\nIs this information correct?");
+
+		var replyMarkup = new InlineKeyboardMarkup(new[]
+		{
+		new[]
+		{
+			InlineKeyboardButton.WithCallbackData("✅ Yes, the data is correct", "confirm_techpass_yes"),
+			InlineKeyboardButton.WithCallbackData("❌ No, the data is incorrect", "confirm_techpass_no")
+		}
+	});
+
+		await botClient.SendMessage(
+			chatId: message.Chat.Id,
+			text: sb.ToString(),
+			replyMarkup: replyMarkup,
+			cancellationToken: cancellationToken
+		);
 	}
+
 
 	private static InlineKeyboardMarkup ConfirmationKeyboard()
 	{

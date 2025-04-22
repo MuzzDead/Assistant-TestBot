@@ -15,7 +15,7 @@ namespace DICEUS_Assistant_TestBot.Handlers
 		public static async Task HandleAsync(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken)
 		{
 			string response = "👋 Hello! I am your assistant for purchasing car insurance.\n" +
-							  "Please send a photo of your passport to get started.";
+							  "📷 Now, please send a photo of your passport to get started.";
 
 			await botClient.SendMessage(
 				chatId: message.Chat.Id,

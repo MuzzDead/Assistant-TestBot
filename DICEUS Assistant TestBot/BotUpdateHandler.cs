@@ -11,10 +11,12 @@ namespace DICEUS_Assistant_TestBot;
 public class BotUpdateHandler : IUpdateHandler
 {
 	private readonly TelegramBotClient _botClient;
+	private readonly CallbackQueryHandler _callbackHandler;
 
-	public BotUpdateHandler(TelegramBotClient botClient)
+	public BotUpdateHandler(TelegramBotClient botClient, CallbackQueryHandler callbackHandler)
 	{
 		_botClient = botClient;
+		_callbackHandler = callbackHandler;
 	}
 
 	public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
@@ -25,25 +27,40 @@ public class BotUpdateHandler : IUpdateHandler
 
 	public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
 	{
-		if (update.Message is not { } message)
-			return;
-
-		switch (message.Type)
+		switch (update.Type)
 		{
-			case MessageType.Text when message.Text == "/start":
-				await StartCommandHandler.HandleAsync(_botClient, message, cancellationToken);
+			case UpdateType.Message:
+				if (update.Message is { } message)
+				{
+					switch (message.Type)
+					{
+						case MessageType.Text when message.Text == "/start":
+							await StartCommandHandler.HandleAsync(_botClient, message, cancellationToken);
+							break;
+
+						case MessageType.Photo:
+							await PhotoHandler.HandleAsync(_botClient, message, cancellationToken);
+							break;
+
+						default:
+							await _botClient.SendMessage(
+								chatId: message.Chat.Id,
+								text: "Please send /start or a photo of your passport.",
+								cancellationToken: cancellationToken
+							);
+							break;
+					}
+				}
 				break;
 
-			case MessageType.Photo:
-				await PhotoHandler.HandleAsync(_botClient, message, cancellationToken);
+			case UpdateType.CallbackQuery:
+				if (update.CallbackQuery is { } callbackQuery)
+				{
+					await _callbackHandler.HandleAsync(_botClient, callbackQuery, cancellationToken);
+				}
 				break;
 
 			default:
-				await _botClient.SendMessage(
-					chatId: message.Chat.Id,
-					text: "Please send /start or a photo of your passport.",
-					cancellationToken: cancellationToken
-				);
 				break;
 		}
 	}
