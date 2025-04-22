@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-
 public class OpenAIService
 {
 	private readonly HttpClient _httpClient;
@@ -15,6 +14,7 @@ public class OpenAIService
 		_apiKey = apiKey;
 	}
 
+	// Generates a car insurance policy
 	public async Task<string> GeneratePolicyAsync(UserSession session)
 	{
 		var tech = session.FakeTechPassportData!;
@@ -42,7 +42,7 @@ public class OpenAIService
 		return await GetOpenAiResponse(prompt, 600);
 	}
 
-
+	// Generates a bot reply
 	public async Task<string> GenerateBotReplyAsync(string userTopic)
 	{
 		string prompt = $"""
@@ -55,12 +55,13 @@ public class OpenAIService
 			Avoid greetings like 'Hi' or 'Hello'. Respond in an informative, human-like, but concise way.
 			""";
 
-
 		return await GetOpenAiResponse(prompt, 200);
 	}
 
+	// Sends the prompt to OpenAI and returns the response
 	private async Task<string> GetOpenAiResponse(string prompt, int maxTokens)
 	{
+		// Create request body using Chat Completions API structure
 		var requestBody = new
 		{
 			model = "gpt-4o",
@@ -71,8 +72,10 @@ public class OpenAIService
 			max_tokens = maxTokens
 		};
 
+		// Serialize to JSON
 		var json = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
 
+		// Set up HTTP request to OpenAI
 		using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions");
 		request.Headers.Add("Authorization", $"Bearer {_apiKey}");
 		request.Content = json;
@@ -80,6 +83,7 @@ public class OpenAIService
 		using var response = await _httpClient.SendAsync(request);
 		response.EnsureSuccessStatusCode();
 
+		// Parse the response JSON to extract the generated text
 		var responseContent = await response.Content.ReadAsStringAsync();
 		using var doc = JsonDocument.Parse(responseContent);
 		var result = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
