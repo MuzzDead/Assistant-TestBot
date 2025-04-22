@@ -19,12 +19,14 @@ public class BotUpdateHandler : IUpdateHandler
 		_callbackHandler = callbackHandler;
 	}
 
+	// Handles any errors
 	public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
 	{
 		Console.WriteLine($"Error: {exception.Message}");
 		return Task.CompletedTask;
 	}
 
+	// Processes incoming updates
 	public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
 	{
 		switch (update.Type)
@@ -34,14 +36,17 @@ public class BotUpdateHandler : IUpdateHandler
 				{
 					switch (message.Type)
 					{
+						// Handle the /start command
 						case MessageType.Text when message.Text == "/start":
 							await StartCommandHandler.HandleAsync(_botClient, message, cancellationToken);
 							break;
 
+						// Process photo uploads
 						case MessageType.Photo:
 							await PhotoHandler.HandleAsync(_botClient, message, cancellationToken);
 							break;
 
+						// Default response for unsupported message types
 						default:
 							await _botClient.SendMessage(
 								chatId: message.Chat.Id,
@@ -56,6 +61,7 @@ public class BotUpdateHandler : IUpdateHandler
 			case UpdateType.CallbackQuery:
 				if (update.CallbackQuery is { } callbackQuery)
 				{
+					// Process button clicks
 					await _callbackHandler.HandleAsync(_botClient, callbackQuery, cancellationToken);
 				}
 				break;
