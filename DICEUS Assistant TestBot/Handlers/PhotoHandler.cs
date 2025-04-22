@@ -17,19 +17,22 @@ public static class PhotoHandler
 	public static async Task HandleAsync(TelegramBotClient botClient, Message message, CancellationToken cancellationToken)
 	{
 		var userId = message.From!.Id;
-		var session = SessionStorage.GetOrCreate(userId);
+		var session = SessionStorage.GetOrCreate(userId); // Retrieve or create a session for the user
 
 		switch (session.CurrentState)
 		{
 			case BotState.WaitingForPassport:
+				// Handle passport photo
 				await HandlePassportPhoto(botClient, message, session, cancellationToken);
 				break;
 
 			case BotState.WaitingForTechPassport:
+				// Handle vehicle registration photo
 				await HandleTechPassportPhoto(botClient, message, session, cancellationToken);
 				break;
 
 			default:
+				// Send an error message if the bot is in an unexpected state
 				await botClient.SendMessage(
 					chatId: message.Chat.Id,
 					text: "Please follow the flow and use the provided buttons.",
@@ -41,6 +44,7 @@ public static class PhotoHandler
 
 	private static async Task HandlePassportPhoto(TelegramBotClient botClient, Message message, UserSession session, CancellationToken cancellationToken)
 	{
+		// Ensure the message contains a photo
 		if (message.Photo == null || message.Photo.Length == 0)
 		{
 			await botClient.SendMessage(
@@ -51,23 +55,27 @@ public static class PhotoHandler
 			return;
 		}
 
+		// Get the highest quality photo (the last one in the array)
 		var fileId = message.Photo.Last().FileId;
 		var file = await botClient.GetFile(fileId, cancellationToken);
 
+		// Download the photo to a memory stream
 		var memoryStream = new MemoryStream();
 		await botClient.DownloadFile(file, memoryStream, cancellationToken);
 		memoryStream.Position = 0;
 
-		// Read Mindee
+		// Use the Mindee service to extract data from the passport
 		var mindeeToken = Environment.GetEnvironmentVariable("MINDEE_TOKEN");
 		var mindee = new MindeeService(mindeeToken);
 		var extracted = await mindee.ExtractDataFromInternationalIdAsync(memoryStream, file.FilePath);
 
+		// Save extracted data to the user session
 		session.PassportFileId = fileId;
 		session.ExtractedFirstName = extracted.FirstName;
 		session.ExtractedLastName = extracted.LastName;
 		session.CurrentState = BotState.ConfirmingPassport;
 
+		// Format the extracted data into a message
 		var reply = $"🔍 I extracted the following data:\n" +
 			$"• First name: {extracted.FirstName}\n" +
 			$"• Last name: {extracted.LastName}\n" +
@@ -78,7 +86,7 @@ public static class PhotoHandler
 			$"• Expiration date: {(extracted.ExpirationDate == DateTime.MinValue ? "Unknown" : extracted.ExpirationDate.ToString("yyyy-MM-dd"))}\n\n" +
 			$"Is this information correct?";
 
-
+		// Send the extracted data with a confirmation keyboard
 		await botClient.SendMessage(
 			chatId: message.Chat.Id,
 			text: reply,
@@ -89,6 +97,7 @@ public static class PhotoHandler
 
 	private static async Task HandleTechPassportPhoto(TelegramBotClient botClient, Message message, UserSession session, CancellationToken cancellationToken)
 	{
+		// Ensure the message contains a photo
 		if (message.Photo == null || message.Photo.Length == 0)
 		{
 			await botClient.SendMessage(
@@ -99,12 +108,15 @@ public static class PhotoHandler
 			return;
 		}
 
+		// Save the file ID of the photo
 		session.TechPassportFileId = message.Photo.Last().FileId;
 
+		// Generate fake data to simulate vehicle registration info (for demo/testing)
 		var data = TechPassportService.GenerateFakeTechData();
 		session.FakeTechPassportData = data;
 		session.CurrentState = BotState.ConfirmingTechPassport;
 
+		// Build a message with the generated data
 		var sb = new StringBuilder();
 		sb.AppendLine("🚗 I extracted the following data from your vehicle registration document:");
 
@@ -114,15 +126,17 @@ public static class PhotoHandler
 		}
 		sb.AppendLine("\nIs this information correct?");
 
+		// Create inline buttons for confirmation
 		var replyMarkup = new InlineKeyboardMarkup(new[]
 		{
-		new[]
-		{
-			InlineKeyboardButton.WithCallbackData("✅ Yes, the data is correct", "confirm_techpass_yes"),
-			InlineKeyboardButton.WithCallbackData("❌ No, the data is incorrect", "confirm_techpass_no")
-		}
-	});
+			new[]
+			{
+				InlineKeyboardButton.WithCallbackData("✅ Yes, the data is correct", "confirm_techpass_yes"),
+				InlineKeyboardButton.WithCallbackData("❌ No, the data is incorrect", "confirm_techpass_no")
+			}
+		});
 
+		// Send the formatted data with confirmation buttons
 		await botClient.SendMessage(
 			chatId: message.Chat.Id,
 			text: sb.ToString(),
@@ -131,7 +145,7 @@ public static class PhotoHandler
 		);
 	}
 
-
+	// Helper method to generate confirmation buttons for passport data
 	private static InlineKeyboardMarkup ConfirmationKeyboard()
 	{
 		return new InlineKeyboardMarkup(new[]
