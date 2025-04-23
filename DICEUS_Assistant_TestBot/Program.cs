@@ -12,15 +12,14 @@ namespace DICEUS_Assistant_TestBot
 		private static async Task Main(string[] args)
 		{
 			// Load environment variables from the specified .env file
-			var executingDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-			var envPath = Path.Combine(
-				Directory.GetParent(executingDir)?.Parent?.Parent?.FullName ?? Directory.GetCurrentDirectory(),
-				".env");
-
-			Env.Load(envPath);
-
 			var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 			var botApi = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
+
+			if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(botApi))
+			{
+				Console.WriteLine("❌ Environment variables not found. Make sure OPENAI_API_KEY and TELEGRAM_BOT_TOKEN are set.");
+				return;
+			}
 
 			// Initialize the Telegram Bot client with the bot token
 			var botClient = new TelegramBotClient(botApi);
@@ -54,8 +53,7 @@ namespace DICEUS_Assistant_TestBot
 			var me = await botClient.GetMe();
 			Console.WriteLine($"Bot {me.Username} is running...");
 
-			Console.ReadLine();
-			cts.Cancel();
+			await Task.Delay(Timeout.Infinite, cts.Token);
 		}
 	}
 }
