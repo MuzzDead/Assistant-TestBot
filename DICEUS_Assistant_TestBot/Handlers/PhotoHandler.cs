@@ -44,7 +44,7 @@ public static class PhotoHandler
 
 	private static async Task HandlePassportPhoto(TelegramBotClient botClient, Message message, UserSession session, CancellationToken cancellationToken)
 	{
-		// Ensure the message contains a photo
+		// Check if the message contains a photo
 		if (message.Photo == null || message.Photo.Length == 0)
 		{
 			await botClient.SendMessage(
@@ -55,7 +55,7 @@ public static class PhotoHandler
 			return;
 		}
 
-		// Get the highest quality photo (the last one in the array)
+		// Get the highest quality version of the photo
 		var fileId = message.Photo.Last().FileId;
 		var file = await botClient.GetFile(fileId, cancellationToken);
 
@@ -64,18 +64,31 @@ public static class PhotoHandler
 		await botClient.DownloadFile(file, memoryStream, cancellationToken);
 		memoryStream.Position = 0;
 
-		// Use the Mindee service to extract data from the passport
+		// Initialize Mindee service using the API token from environment variables
 		var mindeeToken = Environment.GetEnvironmentVariable("MINDEE_TOKEN");
 		var mindee = new MindeeService(mindeeToken);
 		var extracted = await mindee.ExtractDataFromInternationalIdAsync(memoryStream, file.FilePath);
 
-		// Save extracted data to the user session
+		bool isInvalid = string.IsNullOrEmpty(extracted.FirstName) || extracted.FirstName == "Unknown"
+					  || string.IsNullOrEmpty(extracted.LastName) || extracted.LastName == "Unknown";
+
+		if (isInvalid)
+		{
+			await botClient.SendMessage(
+				chatId: message.Chat.Id,
+				text: "❌ Sorry, I couldn't recognize a valid passport in this photo.\n\nPlease try again and make sure the document is clear and visible.",
+				cancellationToken: cancellationToken
+			);
+			return;
+		}
+
+		// Save the extracted data into the session
 		session.PassportFileId = fileId;
 		session.ExtractedFirstName = extracted.FirstName;
 		session.ExtractedLastName = extracted.LastName;
 		session.CurrentState = BotState.ConfirmingPassport;
 
-		// Format the extracted data into a message
+		// Prepare a reply with extracted passport details
 		var reply = $"🔍 I extracted the following data:\n" +
 			$"• First name: {extracted.FirstName}\n" +
 			$"• Last name: {extracted.LastName}\n" +
@@ -86,7 +99,6 @@ public static class PhotoHandler
 			$"• Expiration date: {(extracted.ExpirationDate == DateTime.MinValue ? "Unknown" : extracted.ExpirationDate.ToString("yyyy-MM-dd"))}\n\n" +
 			$"Is this information correct?";
 
-		// Send the extracted data with a confirmation keyboard
 		await botClient.SendMessage(
 			chatId: message.Chat.Id,
 			text: reply,
@@ -94,6 +106,7 @@ public static class PhotoHandler
 			cancellationToken: cancellationToken
 		);
 	}
+
 
 	private static async Task HandleTechPassportPhoto(TelegramBotClient botClient, Message message, UserSession session, CancellationToken cancellationToken)
 	{
