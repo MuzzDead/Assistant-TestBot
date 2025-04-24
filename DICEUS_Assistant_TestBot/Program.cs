@@ -14,6 +14,14 @@ namespace DICEUS_Assistant_TestBot
 			// Load environment variables from the specified .env file
 			var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 			var botApi = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
+
+			_ = Task.Run(() =>
+			{
+    				var listener = new HttpListener();
+    				listener.Prefixes.Add("http://+:10000/");
+    				listener.Start();
+			});
+
 			Console.WriteLine($"API Key: {apiKey}");
 
 			if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(botApi))
