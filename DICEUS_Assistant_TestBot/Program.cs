@@ -4,6 +4,7 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot;
 using DICEUS_Assistant_TestBot.Handlers;
+using System.Net;
 
 namespace DICEUS_Assistant_TestBot
 {
@@ -15,12 +16,9 @@ namespace DICEUS_Assistant_TestBot
 			var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 			var botApi = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
 
-			_ = Task.Run(() =>
-			{
-    				var listener = new HttpListener();
-    				listener.Prefixes.Add("http://+:10000/");
-    				listener.Start();
-			});
+			// Start simple HTTP server to keep Render happy
+			var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+			StartHttpServer(port);
 
 			Console.WriteLine($"API Key: {apiKey}");
 
@@ -63,6 +61,32 @@ namespace DICEUS_Assistant_TestBot
 			Console.WriteLine($"Bot {me.Username} is running...");
 
 			await Task.Delay(Timeout.Infinite, cts.Token);
+		}
+
+		private static void StartHttpServer(string port)
+		{
+			Task.Run(() =>
+			{
+				try
+				{
+					var listener = new HttpListener();
+					listener.Prefixes.Add($"http://+:{port}/");
+					listener.Start();
+					Console.WriteLine($"HTTP server started on port {port}");
+
+					// Keep handling requests
+					while (true)
+					{
+						var context = listener.GetContext();
+						context.Response.StatusCode = 200;
+						context.Response.Close();
+					}
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine($"HTTP server error: {ex.Message}");
+				}
+			});
 		}
 	}
 }
