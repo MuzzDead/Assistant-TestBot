@@ -18,7 +18,9 @@ namespace DICEUS_Assistant_TestBot
 
 			// Start simple HTTP server to keep Render happy
 			var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
+
 			StartHttpServer(port);
+			StartKeepAlivePing(port);
 
 			Console.WriteLine($"API Key: {apiKey}");
 
@@ -63,6 +65,7 @@ namespace DICEUS_Assistant_TestBot
 			await Task.Delay(Timeout.Infinite, cts.Token);
 		}
 
+		// Start local HTTP server
 		private static void StartHttpServer(string port)
 		{
 			Task.Run(() =>
@@ -85,6 +88,31 @@ namespace DICEUS_Assistant_TestBot
 				catch (Exception ex)
 				{
 					Console.WriteLine($"HTTP server error: {ex.Message}");
+				}
+			});
+		}
+
+		// Pinging lo
+		private static void StartKeepAlivePing(string port)
+		{
+			Task.Run(async () =>
+			{
+				using var client = new HttpClient();
+				var url = $"http://localhost:{port}/";
+
+				while (true)
+				{
+					try
+					{
+						await client.GetAsync(url);
+						Console.WriteLine("📡 Self-ping sent.");
+					}
+					catch
+					{
+						Console.WriteLine("⚠️ Self-ping failed.");
+					}
+
+					await Task.Delay(TimeSpan.FromMinutes(5));
 				}
 			});
 		}
