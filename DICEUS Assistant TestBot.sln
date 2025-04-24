@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35527.113 d17.12
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DICEUS Assistant TestBot", "DICEUS Assistant TestBot\DICEUS Assistant TestBot.csproj", "{BDC52232-4578-4616-A710-EC13E0D55C46}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DICEUS_Assistant_TestBot", "DICEUS_Assistant_TestBot\DICEUS_Assistant_TestBot.csproj", "{BDC52232-4578-4616-A710-EC13E0D55C46}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
