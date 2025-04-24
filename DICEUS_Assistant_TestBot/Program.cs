@@ -16,12 +16,6 @@ namespace DICEUS_Assistant_TestBot
 			var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 			var botApi = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN");
 
-			// Start simple HTTP server to keep Render happy
-			var port = Environment.GetEnvironmentVariable("PORT") ?? "10000";
-
-			StartHttpServer(port);
-			StartKeepAlivePing(port);
-
 			Console.WriteLine($"API Key: {apiKey}");
 
 			if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(botApi))
@@ -63,58 +57,6 @@ namespace DICEUS_Assistant_TestBot
 			Console.WriteLine($"Bot {me.Username} is running...");
 
 			await Task.Delay(Timeout.Infinite, cts.Token);
-		}
-
-		// Start local HTTP server
-		private static void StartHttpServer(string port)
-		{
-			Task.Run(() =>
-			{
-				try
-				{
-					var listener = new HttpListener();
-					listener.Prefixes.Add($"http://+:{port}/");
-					listener.Start();
-					Console.WriteLine($"HTTP server started on port {port}");
-
-					// Keep handling requests
-					while (true)
-					{
-						var context = listener.GetContext();
-						context.Response.StatusCode = 200;
-						context.Response.Close();
-					}
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine($"HTTP server error: {ex.Message}");
-				}
-			});
-		}
-
-		// Pinging lo
-		private static void StartKeepAlivePing(string port)
-		{
-			Task.Run(async () =>
-			{
-				using var client = new HttpClient();
-				var url = $"http://localhost:{port}/";
-
-				while (true)
-				{
-					try
-					{
-						await client.GetAsync(url);
-						Console.WriteLine("📡 Self-ping sent.");
-					}
-					catch
-					{
-						Console.WriteLine("⚠️ Self-ping failed.");
-					}
-
-					await Task.Delay(TimeSpan.FromMinutes(5));
-				}
-			});
 		}
 	}
 }
