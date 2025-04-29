@@ -1,21 +1,25 @@
-# 1. Білд імедж з SDK для компіляції
+# 1. Build stage
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Копіюємо .csproj і відновлюємо залежності
+# Copy and restore
 COPY ["DICEUS_Assistant_TestBot.csproj", "./"]
 RUN dotnet restore "./DICEUS_Assistant_TestBot.csproj"
 
-# Копіюємо все інше
+# Copy the rest
 COPY . .
 
-# Публікуємо білд
+# Publish
 RUN dotnet publish "DICEUS_Assistant_TestBot.csproj" -c Release -o /app/publish
 
-# 2. Рантайм-імедж
+# 2. Runtime stage
 FROM mcr.microsoft.com/dotnet/runtime:9.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Запуск
+# Required by Render to detect running service
+ENV PORT=10000
+EXPOSE 10000
+
+# Run the bot
 ENTRYPOINT ["dotnet", "DICEUS_Assistant_TestBot.dll"]
