@@ -5,6 +5,7 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Extensions;
 using DICEUS_Assistant_TestBot.Handlers;
+using DICEUS_Assistant_TestBot.Services;
 
 namespace DICEUS_Assistant_TestBot;
 
@@ -12,11 +13,13 @@ public class BotUpdateHandler : IUpdateHandler
 {
 	private readonly TelegramBotClient _botClient;
 	private readonly CallbackQueryHandler _callbackHandler;
+	private readonly OpenAIService _openAIService;
 
-	public BotUpdateHandler(TelegramBotClient botClient, CallbackQueryHandler callbackHandler)
+	public BotUpdateHandler(TelegramBotClient botClient, CallbackQueryHandler callbackHandler, OpenAIService openAIService)
 	{
 		_botClient = botClient;
 		_callbackHandler = callbackHandler;
+		_openAIService = openAIService;
 	}
 
 	// Handles any errors
@@ -44,6 +47,12 @@ public class BotUpdateHandler : IUpdateHandler
 						// Process photo uploads
 						case MessageType.Photo:
 							await PhotoHandler.HandleAsync(_botClient, message, cancellationToken);
+							break;
+
+						case MessageType.Text:
+							var session = SessionStorage.GetOrCreate(message.From!.Id);
+							var textHandler = new TextMessageHandler(_openAIService);
+							await textHandler.HandleAsync(_botClient, message, session.CurrentState, cancellationToken);
 							break;
 
 						// Default response for unsupported message types

@@ -46,7 +46,7 @@ namespace DICEUS_Assistant_TestBot
 			};
 
 			// Define the update handler for Telegram bot interactions
-			var updateHandler = new BotUpdateHandler(botClient, callbackHandler);
+			var updateHandler = new BotUpdateHandler(botClient, callbackHandler,openAiService);
 
 			// Start receiving updates
 			botClient.StartReceiving(

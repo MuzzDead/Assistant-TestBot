@@ -58,6 +58,38 @@ public class OpenAIService
 		return await GetOpenAiResponse(prompt, 200);
 	}
 
+	public async Task<string> HandleOffScriptQuestionAsync(string userQuestion, string currentState)
+	{
+		string prompt = $"""
+			You are a professional and friendly assistant inside a Telegram bot that sells car insurance.
+			
+			The user has asked a question outside the main flow while at step: {currentState}
+			
+			User question: {userQuestion}
+			
+			## LANGUAGE INSTRUCTIONS
+			1. If the question is in Ukrainian, respond ONLY in Ukrainian
+			2. If the question is in English, respond ONLY in English
+			3. If the question is in any other language, respond in Ukrainian, politely suggest continuing in Ukrainian or English, but keep your response brief and helpful regardless
+			
+			## RESPONSE INSTRUCTIONS
+			1. Provide a brief, helpful answer to their question (maximum 1–3 sentences)
+			2. Keep your entire response under 200 characters if possible
+			3. If the user greets the bot (e.g., "Привіт", "Hi"), respond with a polite short greeting + ask them to continue (e.g., send a document photo)
+			4. In all other cases, do NOT greet the user first
+			5. Make it clear that the bot needs a PHOTO of the required document (not manual input)
+			6. Discuss ONLY car insurance and directly related topics
+			7. Use a warm, helpful tone while maintaining professionalism
+			8. Never invent specific policy information or legal requirements
+			
+			Respond in a natural, conversational way.
+			DO NOT remind them about the current step — this will be handled separately.
+			""";
+			
+
+		return await GetOpenAiResponse(prompt, 350);
+	}
+
 	// Sends the prompt to OpenAI and returns the response
 	private async Task<string> GetOpenAiResponse(string prompt, int maxTokens)
 	{
